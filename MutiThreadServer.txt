@@ -1,0 +1,313 @@
+package MutiThread;
+
+import javax.xml.crypto.Data;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Map;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.Date;
+
+interface DataBase{
+    public int primarily(Statement statement,int e) throws SQLException;
+}
+
+class Primar implements DataBase{
+    private DataBase dataBase;
+    public Primar(final DataBase dataBase){
+        this.dataBase = dataBase;
+    }
+
+    public int primarily(Statement statement,int effect){
+        try {
+            Class.forName("com.mysql.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        try {
+            Connection connection = DriverManager.getConnection("jdbc:mysql://localhost:3306/chatroom?user=root&password=1052602391");
+            Statement statement1 = connection.createStatement();
+            effect = dataBase.primarily(statement1,effect);
+            statement1.close();
+            connection.close();
+        } catch (SQLException e) {
+            effect = 0;
+        }
+        return effect;
+    }
+}
+class Langing implements  DataBase {
+    private String username;
+
+    public Langing(String username) {
+        this.username = username;
+    }
+
+    //用户登陆查询表是否存在
+    public int primarily(Statement statement, int effect) throws SQLException {
+        ResultSet resultSet = null;
+
+        resultSet = statement.executeQuery("select t.table_name from information_schema.TABLES t where " +
+                "t.TABLE_SCHEMA=\"chatroom\" and t.TABLE_NAME=\"" + username + "\"");
+        while (resultSet.next())
+            effect = 1;
+        resultSet.close();
+        return effect;
+    }
+}
+class Register implements DataBase{
+    private String username;
+    public Register(String username) {
+        this.username = username;
+    }
+    //注册用户添加表
+    public int primarily(Statement statement,int effect) throws SQLException{
+        effect = statement.executeUpdate("create table "+username+"(chatcontent varchar(32))");
+        return effect;
+    }
+}
+
+class StoreContent implements DataBase{
+    private String username;
+    private String content;
+    public StoreContent(String username,String content){
+        this.username = username;
+        this.content = content;
+    }
+    //聊天记录保存
+    public int primarily(Statement statement,int effect) throws SQLException{
+        effect = statement.executeUpdate("insert into "+username+" values(\'"+content+"\')");
+        return effect;
+    }
+}
+
+class CheckContent implements DataBase{
+    private String username;
+    private PrintStream out;
+    public CheckContent(String username, PrintStream out){
+        this.username = username;
+        this.out = out;
+    }
+    public int primarily(Statement statement,int effect) throws SQLException{
+        ResultSet resultSet = statement.executeQuery("select chatcontent from "+username);
+        while (resultSet.next())
+           out.println(resultSet.getString("chatcontent"));
+        resultSet.close();
+        return effect;
+    }
+}
+
+class ClearContent implements DataBase{
+    private String username;
+
+    public ClearContent(String username) {
+        this.username = username;
+    }
+
+    public int primarily(Statement statement,int effect) throws SQLException{
+        effect = statement.executeUpdate("delete from "+username);
+        return effect;
+    }
+}
+
+public class MutiThreadServer {
+    //储存所有注册的客户端
+    private static Map<String,Socket> clientMap = new ConcurrentHashMap<String,Socket>();
+    //具体处理每个客户端通信的内部类
+    private static class ExecuteClient implements Runnable{
+        //当前时间
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//设置日期格式
+        //创建数据库对象
+        Statement statement = null;
+        private Socket client;
+
+        public ExecuteClient(Socket client) {
+            this.client = client;
+        }
+
+        @Override
+        public void run() {
+            //获取客户端输入流
+            try {
+                Scanner in = new Scanner(client.getInputStream());
+                in.useDelimiter("\n");
+                String strFromClient;
+                while(true){
+                    if(in.hasNextLine()){
+                        strFromClient = in.nextLine();
+                        //windows下将默认换行/r/n中的/r替换为空字符串
+                        Pattern pattern = Pattern.compile("\r");
+                        Matcher matcher = pattern.matcher(strFromClient);
+                        strFromClient = matcher.replaceAll("");
+                        //注册流程
+                        if(strFromClient.startsWith("userName")){
+                            String user = strFromClient.split(":")[1];
+                            DataBase dataBase = new Register(user);
+                            Primar primar = new Primar(dataBase);
+                            int num = primar.primarily(statement,0);
+                            if(num == 0){
+                                PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
+                                //告知用户注册成功
+                                out.println(df.format(new Date())+"  用户名已经被注册");
+                                continue;
+                            }
+                            registerUser(user,client);
+                            continue;
+                        }
+                        //群聊流程
+                        else if(strFromClient.startsWith("G")){
+                            String groupMsg = strFromClient.split(":")[1];
+                            groupChat(groupMsg);
+                            continue;
+                        }
+                        //私聊流程
+                        else if(strFromClient.startsWith("P")){
+                            String string = strFromClient.split(":")[1];
+                            String user = string.split("-")[0];
+                            String userFrom = string.split("-")[1];
+                            String msg = string.split("-")[2];
+                            privateChat(user,userFrom,msg);
+                            continue;
+                        }
+                        //用户退出
+                        else if(strFromClient.contains("byebye")){
+                            //根据Socket找到userName
+                            String userName = null;
+                            for(String keyName : clientMap.keySet()){
+                                if(clientMap.get(keyName).equals(client)){
+                                    userName = keyName;
+                                    break;
+                                }
+                            }
+                            System.out.println("用户"+userName+"下线了!");
+                            clientMap.remove(userName);
+                            continue;
+                        }else if(strFromClient.startsWith("landing")){
+                            String user = strFromClient.split(":")[1];
+                            DataBase dataBase = new Langing(user);
+                            Primar primar = new Primar(dataBase);
+                            int num = primar.primarily(statement,0);
+                            if(num == 0){
+                                PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
+                                //告知用户注册成功
+                                out.println(df.format(new Date())+"  没有此用户，无法登陆!");
+                                continue;
+                            }
+                            registerUser(user,client);
+                            continue;
+                        }else if(strFromClient.startsWith("check")){
+                            Check();
+                        }else if(strFromClient.startsWith("clear")){
+                            Clear();
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        //注册方法
+        private void registerUser(String useName,Socket client){
+            //将用户信息保存在map中
+            clientMap.put(useName,client);
+            System.out.println("用户姓名为："+useName);
+            System.out.println("用户"+useName+"上线了！");
+            groupChat("用户"+useName+"上线了！");
+            System.out.println("当前群聊人数为"+clientMap.size()+"人");
+            try {
+                PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
+                //告知用户注册成功
+                out.println(df.format(new Date())+"  用户登陆成功！");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        //群聊方法
+        private void groupChat(String msg){
+            //取出clientMap中所有Entry遍历发送群聊信息
+            Set<Map.Entry<String,Socket>> clientSet = clientMap.entrySet();
+            for(Map.Entry<String,Socket> entry : clientSet){
+                Socket socket = entry.getValue();
+                //取得每个客户端的输出流
+                try {
+                    PrintStream out = new PrintStream(socket.getOutputStream(),true,"UTF-8");
+                    out.println(df.format(new Date())+"  群聊信息为"+msg);
+                } catch (IOException e) {
+                    System.out.println("群聊异常，错误为"+e);
+                }
+                String name = entry.getKey();
+                DataBase dataBase = new StoreContent(name,df.format(new Date())+"  群聊信息为"+msg);
+                Primar primar = new Primar(dataBase);
+                int num = primar.primarily(statement,0);
+            }
+        }
+        //私聊方法
+        private void privateChat(String userName,String userFrom,String msg){
+            Socket privateSocket = clientMap.get(userName);
+            //获取私聊用户输出流
+            try {
+                PrintStream out = new PrintStream(privateSocket.getOutputStream(),true,"UTF-8");
+                out.println(df.format(new Date())+"  "+userFrom+"的私聊信息为"+msg);
+            } catch (IOException e) {
+                System.out.println("私聊异常，错误为"+e);
+            }
+            DataBase dataBase = new StoreContent(userName,df.format(new Date())+"  "+userFrom+"的私聊信息为"+msg);
+            Primar primar = new Primar(dataBase);
+            int num = primar.primarily(statement,0);
+        }
+        //查看聊天记录方法
+        private void Check() throws IOException {
+            String userName = null;
+            for(String keyName : clientMap.keySet()){
+                if(clientMap.get(keyName).equals(client)){
+                    userName = keyName;
+                    break;
+                }
+            }
+            PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
+            DataBase dataBase = new CheckContent(userName,out);
+            Primar primar = new Primar(dataBase);
+            int num = primar.primarily(statement,0);
+        }
+        //情况聊天记录方法
+        private void Clear() throws IOException {
+            String userName = null;
+            for(String keyName : clientMap.keySet()){
+                if(clientMap.get(keyName).equals(client)){
+                    userName = keyName;
+                    break;
+                }
+            }
+            DataBase dataBase = new ClearContent(userName);
+            Primar primar = new Primar(dataBase);
+            int num = primar.primarily(statement,0);
+            if(num == 1){
+                PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
+                out.println("聊天记录已经清空！");
+            }
+        }
+    }
+
+    public static void main(String[] args) throws IOException {
+        ExecutorService executorService = Executors.newFixedThreadPool(20);
+        ServerSocket serverSocket = new ServerSocket(6666);
+        for(int i=0; i<20; i++){
+            System.out.println("等待客户端链接...");
+            Socket client = serverSocket.accept();
+            System.out.println("有新的客户端链接，端口号为"+client.getPort());
+            executorService.submit(new ExecuteClient(client));
+        }
+        executorService.shutdown();
+        serverSocket.close();
+    }
+}

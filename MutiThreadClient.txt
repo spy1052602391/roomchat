@@ -1,0 +1,91 @@
+package MutiThread;
+
+import java.io.IOException;
+import java.io.PrintStream;
+import java.net.Socket;
+import java.util.Scanner;
+
+class ReadFromServerThread implements Runnable{
+    private Socket cilent;
+
+    public ReadFromServerThread(Socket cilent) {
+        this.cilent = cilent;
+    }
+
+    @Override
+    public void run() {
+        Scanner in = null;
+        //获取客户端的输入流
+        try {
+            in = new Scanner(cilent.getInputStream());
+            in.useDelimiter("\n");
+            while(true){
+                if(in.hasNext()){
+                    System.out.println(in.next());
+                }
+                //此客户端退出
+                if(cilent.isClosed()){
+                    System.out.println("客户端已关闭");
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            in.close();
+        }
+    }
+}
+
+class WriteToServerThread implements Runnable{
+    private Socket cilent;
+
+    public WriteToServerThread(Socket cilent) {
+        this.cilent = cilent;
+    }
+
+    @Override
+    public void run() {
+        PrintStream printStream = null;
+        Scanner in = null;
+        try {
+            //获取键盘的输入
+            in = new Scanner(System.in);
+            in.useDelimiter("\n");
+            printStream = new PrintStream(cilent.getOutputStream(),true,"UTF-8");
+            while(true){
+                System.out.println("请输入要发送的信息....");
+                String  strToServer;
+                if(in.hasNextLine()){
+                    strToServer = in.nextLine().trim();
+                    printStream.println(strToServer);
+                    //客户端退出标志
+                    if(strToServer.equals("byebye")){
+                        System.out.println("关闭客户端");
+                        break;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            in.close();
+            printStream.close();
+            try {
+                cilent.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+public class MutiThreadClient {
+    public static void main(String[] args) throws IOException {
+        Socket cilent = new Socket("127.0.0.1",6666);
+        Thread readThread = new Thread(new ReadFromServerThread(cilent));
+        Thread sendThread = new Thread(new WriteToServerThread(cilent));
+        readThread.start();
+        sendThread.start();
+    }
+}
