@@ -15,7 +15,7 @@ class ReadFromServerThread implements Runnable{
     @Override
     public void run() {
         Scanner in = null;
-        //��ȡ�ͻ��˵�������
+        //获取客户端的输入流
         try {
             in = new Scanner(cilent.getInputStream());
             in.useDelimiter("\n");
@@ -23,9 +23,9 @@ class ReadFromServerThread implements Runnable{
                 if(in.hasNext()){
                     System.out.println(in.next());
                 }
-                //�˿ͻ����˳�
+                //此客户端退出
                 if(cilent.isClosed()){
-                    System.out.println("�ͻ����ѹر�");
+                    System.out.println("客户端已关闭");
                     break;
                 }
             }
@@ -49,19 +49,19 @@ class WriteToServerThread implements Runnable{
         PrintStream printStream = null;
         Scanner in = null;
         try {
-            //��ȡ���̵�����
+            //获取键盘的输入
             in = new Scanner(System.in);
             in.useDelimiter("\n");
             printStream = new PrintStream(cilent.getOutputStream(),true,"UTF-8");
             while(true){
-                System.out.println("������Ҫ���͵���Ϣ....");
+                System.out.println("请输入要发送的信息....");
                 String  strToServer;
                 if(in.hasNextLine()){
                     strToServer = in.nextLine().trim();
                     printStream.println(strToServer);
-                    //�ͻ����˳���־
+                    //客户端退出标志
                     if(strToServer.equals("byebye")){
-                        System.out.println("�رտͻ���");
+                        System.out.println("关闭客户端");
                         break;
                     }
                 }
@@ -82,6 +82,14 @@ class WriteToServerThread implements Runnable{
 
 public class MutiThreadClient {
     public static void main(String[] args) throws IOException {
+        System.out.println("欢迎来到心语聊天广场！");
+        System.out.println("输入userName:XXX 注册用户");
+        System.out.println("输入landing:XXX 登陆用户");
+        System.out.println("输入G:XXX 发送群聊消息");
+        System.out.println("输入P:对方用户名-自己用户名-XXX 发送私聊消息");
+        System.out.println("check      查看聊天记录");
+        System.out.println("clear      清空聊天记录");
+        System.out.println("byebye      退出用户");
         Socket cilent = new Socket("127.0.0.1",6666);
         Thread readThread = new Thread(new ReadFromServerThread(cilent));
         Thread sendThread = new Thread(new WriteToServerThread(cilent));
