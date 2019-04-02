@@ -52,7 +52,7 @@ class Langing implements  DataBase {
         this.username = username;
     }
 
-    //ÓÃ»§µÇÂ½²éÑ¯±íÊÇ·ñ´æÔÚ
+    //ç”¨æˆ·ç™»é™†æŸ¥è¯¢è¡¨æ˜¯å¦å­˜åœ¨
     public int primarily(Statement statement, int effect) throws SQLException {
         ResultSet resultSet = null;
 
@@ -69,7 +69,7 @@ class Register implements DataBase{
     public Register(String username) {
         this.username = username;
     }
-    //×¢²áÓÃ»§Ìí¼Ó±í
+    //æ³¨å†Œç”¨æˆ·æ·»åŠ è¡¨
     public int primarily(Statement statement,int effect) throws SQLException{
         effect = statement.executeUpdate("create table "+username+"(chatcontent varchar(32))");
         return effect;
@@ -83,7 +83,7 @@ class StoreContent implements DataBase{
         this.username = username;
         this.content = content;
     }
-    //ÁÄÌì¼ÇÂ¼±£´æ
+    //èŠå¤©è®°å½•ä¿å­˜
     public int primarily(Statement statement,int effect) throws SQLException{
         effect = statement.executeUpdate("insert into "+username+" values(\'"+content+"\')");
         return effect;
@@ -120,13 +120,13 @@ class ClearContent implements DataBase{
 }
 
 public class MutiThreadServer {
-    //´¢´æËùÓĞ×¢²áµÄ¿Í»§¶Ë
+    //å‚¨å­˜æ‰€æœ‰æ³¨å†Œçš„å®¢æˆ·ç«¯
     private static Map<String,Socket> clientMap = new ConcurrentHashMap<String,Socket>();
-    //¾ßÌå´¦ÀíÃ¿¸ö¿Í»§¶ËÍ¨ĞÅµÄÄÚ²¿Àà
+    //å…·ä½“å¤„ç†æ¯ä¸ªå®¢æˆ·ç«¯é€šä¿¡çš„å†…éƒ¨ç±»
     private static class ExecuteClient implements Runnable{
-        //µ±Ç°Ê±¼ä
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//ÉèÖÃÈÕÆÚ¸ñÊ½
-        //´´½¨Êı¾İ¿â¶ÔÏó
+        //å½“å‰æ—¶é—´
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");//è®¾ç½®æ—¥æœŸæ ¼å¼
+        //åˆ›å»ºæ•°æ®åº“å¯¹è±¡
         Statement statement = null;
         private Socket client;
 
@@ -136,7 +136,7 @@ public class MutiThreadServer {
 
         @Override
         public void run() {
-            //»ñÈ¡¿Í»§¶ËÊäÈëÁ÷
+            //è·å–å®¢æˆ·ç«¯è¾“å…¥æµ
             try {
                 Scanner in = new Scanner(client.getInputStream());
                 in.useDelimiter("\n");
@@ -144,32 +144,26 @@ public class MutiThreadServer {
                 while(true){
                     if(in.hasNextLine()){
                         strFromClient = in.nextLine();
-                        //windowsÏÂ½«Ä¬ÈÏ»»ĞĞ/r/nÖĞµÄ/rÌæ»»Îª¿Õ×Ö·û´®
+                        //windowsä¸‹å°†é»˜è®¤æ¢è¡Œ/r/nä¸­çš„/ræ›¿æ¢ä¸ºç©ºå­—ç¬¦ä¸²
                         Pattern pattern = Pattern.compile("\r");
                         Matcher matcher = pattern.matcher(strFromClient);
                         strFromClient = matcher.replaceAll("");
-                        //×¢²áÁ÷³Ì
+                        //æ³¨å†Œæµç¨‹
                         if(strFromClient.startsWith("userName")){
                             String user = strFromClient.split(":")[1];
                             DataBase dataBase = new Register(user);
                             Primar primar = new Primar(dataBase);
                             int num = primar.primarily(statement,0);
-                            if(num == 0){
-                                PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
-                                //¸æÖªÓÃ»§×¢²á³É¹¦
-                                out.println(df.format(new Date())+"  ÓÃ»§ÃûÒÑ¾­±»×¢²á");
-                                continue;
-                            }
                             registerUser(user,client);
                             continue;
                         }
-                        //ÈºÁÄÁ÷³Ì
+                        //ç¾¤èŠæµç¨‹
                         else if(strFromClient.startsWith("G")){
                             String groupMsg = strFromClient.split(":")[1];
                             groupChat(groupMsg);
                             continue;
                         }
-                        //Ë½ÁÄÁ÷³Ì
+                        //ç§èŠæµç¨‹
                         else if(strFromClient.startsWith("P")){
                             String string = strFromClient.split(":")[1];
                             String user = string.split("-")[0];
@@ -178,9 +172,9 @@ public class MutiThreadServer {
                             privateChat(user,userFrom,msg);
                             continue;
                         }
-                        //ÓÃ»§ÍË³ö
+                        //ç”¨æˆ·é€€å‡º
                         else if(strFromClient.contains("byebye")){
-                            //¸ù¾İSocketÕÒµ½userName
+                            //æ ¹æ®Socketæ‰¾åˆ°userName
                             String userName = null;
                             for(String keyName : clientMap.keySet()){
                                 if(clientMap.get(keyName).equals(client)){
@@ -188,7 +182,7 @@ public class MutiThreadServer {
                                     break;
                                 }
                             }
-                            System.out.println("ÓÃ»§"+userName+"ÏÂÏßÁË!");
+                            System.out.println("ç”¨æˆ·"+userName+"ä¸‹çº¿äº†!");
                             clientMap.remove(userName);
                             continue;
                         }else if(strFromClient.startsWith("landing")){
@@ -198,8 +192,8 @@ public class MutiThreadServer {
                             int num = primar.primarily(statement,0);
                             if(num == 0){
                                 PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
-                                //¸æÖªÓÃ»§×¢²á³É¹¦
-                                out.println(df.format(new Date())+"  Ã»ÓĞ´ËÓÃ»§£¬ÎŞ·¨µÇÂ½!");
+                                //å‘ŠçŸ¥ç”¨æˆ·æ³¨å†ŒæˆåŠŸ
+                                out.println(df.format(new Date())+"  æ²¡æœ‰æ­¤ç”¨æˆ·ï¼Œæ— æ³•ç™»é™†!");
                                 continue;
                             }
                             registerUser(user,client);
@@ -216,56 +210,56 @@ public class MutiThreadServer {
             }
         }
 
-        //×¢²á·½·¨
+        //æ³¨å†Œæ–¹æ³•
         private void registerUser(String useName,Socket client){
-            //½«ÓÃ»§ĞÅÏ¢±£´æÔÚmapÖĞ
+            //å°†ç”¨æˆ·ä¿¡æ¯ä¿å­˜åœ¨mapä¸­
             clientMap.put(useName,client);
-            System.out.println("ÓÃ»§ĞÕÃûÎª£º"+useName);
-            System.out.println("ÓÃ»§"+useName+"ÉÏÏßÁË£¡");
-            groupChat("ÓÃ»§"+useName+"ÉÏÏßÁË£¡");
-            System.out.println("µ±Ç°ÈºÁÄÈËÊıÎª"+clientMap.size()+"ÈË");
+            System.out.println("ç”¨æˆ·å§“åä¸ºï¼š"+useName);
+            System.out.println("ç”¨æˆ·"+useName+"ä¸Šçº¿äº†ï¼");
+            groupChat("ç”¨æˆ·"+useName+"ä¸Šçº¿äº†ï¼");
+            System.out.println("å½“å‰ç¾¤èŠäººæ•°ä¸º"+clientMap.size()+"äºº");
             try {
                 PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
-                //¸æÖªÓÃ»§×¢²á³É¹¦
-                out.println(df.format(new Date())+"  ÓÃ»§µÇÂ½³É¹¦£¡");
+                //å‘ŠçŸ¥ç”¨æˆ·æ³¨å†ŒæˆåŠŸ
+                out.println(df.format(new Date())+"  ç”¨æˆ·ç™»é™†æˆåŠŸï¼");
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        //ÈºÁÄ·½·¨
+        //ç¾¤èŠæ–¹æ³•
         private void groupChat(String msg){
-            //È¡³öclientMapÖĞËùÓĞEntry±éÀú·¢ËÍÈºÁÄĞÅÏ¢
+            //å–å‡ºclientMapä¸­æ‰€æœ‰Entryéå†å‘é€ç¾¤èŠä¿¡æ¯
             Set<Map.Entry<String,Socket>> clientSet = clientMap.entrySet();
             for(Map.Entry<String,Socket> entry : clientSet){
                 Socket socket = entry.getValue();
-                //È¡µÃÃ¿¸ö¿Í»§¶ËµÄÊä³öÁ÷
+                //å–å¾—æ¯ä¸ªå®¢æˆ·ç«¯çš„è¾“å‡ºæµ
                 try {
                     PrintStream out = new PrintStream(socket.getOutputStream(),true,"UTF-8");
-                    out.println(df.format(new Date())+"  ÈºÁÄĞÅÏ¢Îª"+msg);
+                    out.println(df.format(new Date())+"  ç¾¤èŠä¿¡æ¯ä¸º"+msg);
                 } catch (IOException e) {
-                    System.out.println("ÈºÁÄÒì³££¬´íÎóÎª"+e);
+                    System.out.println("ç¾¤èŠå¼‚å¸¸ï¼Œé”™è¯¯ä¸º"+e);
                 }
                 String name = entry.getKey();
-                DataBase dataBase = new StoreContent(name,df.format(new Date())+"  ÈºÁÄĞÅÏ¢Îª"+msg);
+                DataBase dataBase = new StoreContent(name,df.format(new Date())+"  ç¾¤èŠä¿¡æ¯ä¸º"+msg);
                 Primar primar = new Primar(dataBase);
                 int num = primar.primarily(statement,0);
             }
         }
-        //Ë½ÁÄ·½·¨
+        //ç§èŠæ–¹æ³•
         private void privateChat(String userName,String userFrom,String msg){
             Socket privateSocket = clientMap.get(userName);
-            //»ñÈ¡Ë½ÁÄÓÃ»§Êä³öÁ÷
+            //è·å–ç§èŠç”¨æˆ·è¾“å‡ºæµ
             try {
                 PrintStream out = new PrintStream(privateSocket.getOutputStream(),true,"UTF-8");
-                out.println(df.format(new Date())+"  "+userFrom+"µÄË½ÁÄĞÅÏ¢Îª"+msg);
+                out.println(df.format(new Date())+"  "+userFrom+"çš„ç§èŠä¿¡æ¯ä¸º"+msg);
             } catch (IOException e) {
-                System.out.println("Ë½ÁÄÒì³££¬´íÎóÎª"+e);
+                System.out.println("ç§èŠå¼‚å¸¸ï¼Œé”™è¯¯ä¸º"+e);
             }
-            DataBase dataBase = new StoreContent(userName,df.format(new Date())+"  "+userFrom+"µÄË½ÁÄĞÅÏ¢Îª"+msg);
+            DataBase dataBase = new StoreContent(userName,df.format(new Date())+"  "+userFrom+"çš„ç§èŠä¿¡æ¯ä¸º"+msg);
             Primar primar = new Primar(dataBase);
             int num = primar.primarily(statement,0);
         }
-        //²é¿´ÁÄÌì¼ÇÂ¼·½·¨
+        //æŸ¥çœ‹èŠå¤©è®°å½•æ–¹æ³•
         private void Check() throws IOException {
             String userName = null;
             for(String keyName : clientMap.keySet()){
@@ -279,7 +273,7 @@ public class MutiThreadServer {
             Primar primar = new Primar(dataBase);
             int num = primar.primarily(statement,0);
         }
-        //Çé¿öÁÄÌì¼ÇÂ¼·½·¨
+        //æƒ…å†µèŠå¤©è®°å½•æ–¹æ³•
         private void Clear() throws IOException {
             String userName = null;
             for(String keyName : clientMap.keySet()){
@@ -293,7 +287,7 @@ public class MutiThreadServer {
             int num = primar.primarily(statement,0);
             if(num == 1){
                 PrintStream out = new PrintStream(client.getOutputStream(),true,"UTF-8");
-                out.println("ÁÄÌì¼ÇÂ¼ÒÑ¾­Çå¿Õ£¡");
+                out.println("èŠå¤©è®°å½•å·²ç»æ¸…ç©ºï¼");
             }
         }
     }
@@ -302,9 +296,9 @@ public class MutiThreadServer {
         ExecutorService executorService = Executors.newFixedThreadPool(20);
         ServerSocket serverSocket = new ServerSocket(6666);
         for(int i=0; i<20; i++){
-            System.out.println("µÈ´ı¿Í»§¶ËÁ´½Ó...");
+            System.out.println("ç­‰å¾…å®¢æˆ·ç«¯é“¾æ¥...");
             Socket client = serverSocket.accept();
-            System.out.println("ÓĞĞÂµÄ¿Í»§¶ËÁ´½Ó£¬¶Ë¿ÚºÅÎª"+client.getPort());
+            System.out.println("æœ‰æ–°çš„å®¢æˆ·ç«¯é“¾æ¥ï¼Œç«¯å£å·ä¸º"+client.getPort());
             executorService.submit(new ExecuteClient(client));
         }
         executorService.shutdown();
